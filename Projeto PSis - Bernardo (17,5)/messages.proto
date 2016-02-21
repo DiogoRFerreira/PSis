@@ -1,0 +1,15 @@
+message RESPONSE{
+	required int32 type=1;
+	optional string login_valid=2;
+	optional string m_forward=3;
+	optional string username_sender=4;
+	optional string old_messages=5;
+}
+
+message CLIENT_MESSAGE{
+	required int32 type=1;
+	optional string username=2;
+	optional string message=3;
+	optional string id_min=4;
+	optional string id_max=5;	
+}
