@@ -6,7 +6,9 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <unistd.h>
+
 #include "psiskv_lib.h"
+
 //Connect
 int kv_connect(char * kv_controler_ip,int kv_server_port){
 	int fd, n;
@@ -48,7 +50,7 @@ int kv_write(int kv_descriptor, uint32_t key, char * value, int value_length){
 	msg.operation=1;
 	msg.key=key;
 	msg.value_length=value_length;
-	int n;
+	long n;
 	
 	n=write(kv_descriptor, &msg, sizeof(msg));
 	if(n<=0){
@@ -67,7 +69,7 @@ int kv_write(int kv_descriptor, uint32_t key, char * value, int value_length){
 
 //Retrieve
 int kv_read(int kv_descriptor, uint32_t key, char * value, int value_length){
-	int n;
+	long n;
 	message msg;
 	msg.operation=2;
 	msg.key=key;
@@ -90,7 +92,7 @@ int kv_read(int kv_descriptor, uint32_t key, char * value, int value_length){
 
 //Delete
 int kv_delete(int kv_descriptor, uint32_t key){
-	int n;
+	long n;
 	message msg;
 	msg.operation=3;
 	msg.key=key;

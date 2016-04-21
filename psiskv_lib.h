@@ -1,3 +1,6 @@
+#ifndef psiskv_lib_h
+#define psiskv_lib_h
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -18,3 +21,4 @@ int kv_read(int kv_descriptor, uint32_t key, char * value, int value_length);
 
 int kv_delete(int kv_descriptor, uint32_t key);
 
+#endif /* psiskv_lib_h */

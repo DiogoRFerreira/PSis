@@ -6,7 +6,9 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <unistd.h>
+
 #include "psiskv_server_lib.h"
+#include "psiskv_list.h"
 
 int kv_server_listen(int kv_server_port){
 	int fd;
@@ -50,7 +52,7 @@ int kv_server_accept(int fd){
 
 int kv_server_read(int kv_descriptor){
 	message msg;
-	int n;
+	long n;
 	
 	n=read(kv_descriptor, &msg, sizeof(msg));
 	if(n<=0){
@@ -59,7 +61,7 @@ int kv_server_read(int kv_descriptor){
 	}
 	
 
-		char*value=(char*)malloc(msg.value_length*sizeof(char));
+    char * value=(char*)malloc(msg.value_length*sizeof(char));
 	
 	switch(msg.operation){
 		case 1://Insert
@@ -69,9 +71,11 @@ int kv_server_read(int kv_descriptor){
 				return -1;
 			}
 			//Insert value in the list
+            //head = add_value(head, msg.key, value);
 			break;
 		case 2://Retrieve
 			//Search value in the list
+            //value=read_value(head, msg.key)
 			n=write(kv_descriptor, value, msg.value_length);
 			if(n<=0){
 				perror("Write: ");
@@ -80,6 +84,7 @@ int kv_server_read(int kv_descriptor){
 			break;
 		case 3://Delete
 			//Apagar value e key da lista
+            //head=delete_value(head, msg.key)
 			break;
 	}
 	

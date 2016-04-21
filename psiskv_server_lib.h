@@ -1,3 +1,6 @@
+#ifndef psiskv_server_lib_h
+#define psiskv_server_lib_h
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -16,3 +19,4 @@ int kv_server_accept(int fd);
 int kv_server_read(int kv_descriptor);
 
 
+#endif /* psiskv_server_lib_h */

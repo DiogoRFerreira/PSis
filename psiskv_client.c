@@ -1,6 +1,7 @@
 #include "psiskv_lib.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define kv_server_port 2000
 
@@ -8,7 +9,7 @@ int main(){
 	
 	char * kv_controler_ip = "192.168.1.3";
 	char * value = "olaola";
-	int value_lenght = strlen(value), fd, error;
+	int value_length = (int)strlen(value), fd, error;
 	uint32_t key = 35;
 	
 	//Connect
