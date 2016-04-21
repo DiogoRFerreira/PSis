@@ -9,6 +9,10 @@ typedef struct msg_{
 }message;
 
 
+int kv_server_listen(int kv_server_port);
 
+int kv_server_accept(int fd);
+
+int kv_server_read(int kv_descriptor);
 
 

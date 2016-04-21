@@ -68,9 +68,10 @@ int kv_server_read(int kv_descriptor){
 				perror("Read: ");
 				return -1;
 			}
+			//Insert value in the list
 			break;
 		case 2://Retrieve
-			//Buscar value na lista
+			//Search value in the list
 			n=write(kv_descriptor, value, msg.value_length);
 			if(n<=0){
 				perror("Write: ");
