@@ -75,18 +75,20 @@ int kv_read(int kv_descriptor, uint32_t key, char * value, int value_length){
 	msg.key=key;
 	msg.value_length=value_length;
 	
+	
+	
 	n=write(kv_descriptor, &msg, sizeof(msg));
 	if(n<=0){
 		perror("Write: ");
 		return -1;
 	}
-	
+
 	n=read(kv_descriptor, value, value_length);
 	if(n<=0){
 		perror("Read: ");
 		return -1;
 	}
-	
+
 	return 0;
 }
 

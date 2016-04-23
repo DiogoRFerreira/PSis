@@ -60,7 +60,7 @@ node * add_value(node * head, uint32_t key, char * value) {
             new_element->next = head;
             head = new_element;
         }else{
-            char * temporary = (char*)malloc((strlen(value)+strlen(current->value))*sizeof(char));
+            char * temporary = (char*)malloc((strlen(value)+strlen(head->value))*sizeof(char));
             sprintf(temporary, "%s%s", head->value, value);
             head->value = temporary;//
         }
