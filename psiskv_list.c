@@ -39,7 +39,7 @@ char * read_value(node * head, uint32_t key){
 }
 
 // Insert
-node * add_value(node * head, uint32_t key, char * value) {
+void add_value(node ** head, uint32_t key, char * value) {
 
     node * current, * previous;
     node * new_element = (node*)malloc(sizeof(node));
@@ -48,26 +48,26 @@ node * add_value(node * head, uint32_t key, char * value) {
     
     int added=0;
 
-	if(head==NULL){ //Lista vazia
-		head = new_element;
-		head->next = NULL;
+	if((*head)==NULL){ //Lista vazia
+		(*head) = new_element;
+		(*head)->next = NULL;
         // (*num_elements_ptr)++;
-    }else if(head->next==NULL){ //Só existe um elemento na lista
-        if (key > head->key){
-            head->next = new_element;
+    }else if((*head)->next==NULL){ //Só existe um elemento na lista
+        if (key > (*head)->key){
+            (*head)->next = new_element;
             new_element->next = NULL;
-        }else if(key < head->key){
-            new_element->next = head;
-            head = new_element;
+        }else if(key < (*head)->key){
+            new_element->next = *head;
+            *head = new_element;
         }else{
-            char * temporary = (char*)malloc((strlen(value)+strlen(head->value))*sizeof(char));
-            sprintf(temporary, "%s%s", head->value, value);
-            head->value = temporary;//
+            char * temporary = (char*)malloc((strlen(value)+strlen((*head)->value))*sizeof(char));
+            sprintf(temporary, "%s%s", (*head)->value, value);
+            (*head)->value = temporary;//
         }
 	}else{ 	//Mais do que um elemento na lista
         // Initialize pointers
-        current = head;
-        previous = head;
+        current = *head;
+        previous = *head;
         
 		while (added!=1) {
 			if(current->key==key) {		// Found element with key
@@ -87,8 +87,8 @@ node * add_value(node * head, uint32_t key, char * value) {
 				}
             }else if(current->key > key){
                 new_element->next = current;
-				if (head == current) {
-					head = new_element;
+				if (*head == current) {
+					*head = new_element;
 				}else{
 					previous->next = new_element;
                     previous->next->next=current;
@@ -97,13 +97,13 @@ node * add_value(node * head, uint32_t key, char * value) {
 			}
 		}
 	}
-    return head;
+    //return *head;
 }
 
 // Delete
-node * delete_value(node * head, uint32_t key){
+void delete_value(node ** head, uint32_t key){
     
-    node * previous, * current = head;
+    node * previous, * current = *head;
     
     previous = current;
     while (current!=NULL) {
@@ -111,7 +111,7 @@ node * delete_value(node * head, uint32_t key){
             if (current->next == NULL && previous==current) {
                 head = NULL;
             }else if (previous==current){
-                head = current->next;
+                *head = current->next;
             }else{
                 previous->next = current->next;
             }
@@ -121,6 +121,6 @@ node * delete_value(node * head, uint32_t key){
 			current = current->next;
         }
     }
-    return head;
+    //return head;
 }
 

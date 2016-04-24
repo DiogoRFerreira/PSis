@@ -15,8 +15,8 @@ void print_list(node*head);
 
 char * read_value(node * head, uint32_t key);
 
-node * add_value(node * head, uint32_t key, char * value);
+void add_value(node ** head, uint32_t key, char * value);
 
-node * delete_value(node * head, uint32_t key);
+void delete_value(node ** head, uint32_t key);
 
 #endif /* psiskv_list_h */

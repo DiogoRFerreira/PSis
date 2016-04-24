@@ -44,8 +44,8 @@ void kv_close(int kv_descriptor){
 	close(kv_descriptor);
 }
 
-//Insert
-int kv_write(int kv_descriptor, uint32_t key, char * value, int value_length){
+//Insert -- Precisa de mudanças ver lab8
+int kv_write(int kv_descriptor, uint32_t key, char * value, uint32_t value_length, int kv_overwrite){
 	message msg;
 	msg.operation=1;
 	msg.key=key;
@@ -67,8 +67,8 @@ int kv_write(int kv_descriptor, uint32_t key, char * value, int value_length){
 	return 0;
 }
 
-//Retrieve
-int kv_read(int kv_descriptor, uint32_t key, char * value, int value_length){
+//Retrieve -- Precisa de mudanças ver amarelo lab8
+int kv_read(int kv_descriptor, uint32_t key, char * value, uint32_t value_length){
 	long n;
 	message msg;
 	msg.operation=2;
@@ -88,7 +88,8 @@ int kv_read(int kv_descriptor, uint32_t key, char * value, int value_length){
 		perror("Read: ");
 		return -1;
 	}
-
+    if(value==NULL)return -2;
+    //Supostamente retorna o length of the value store
 	return 0;
 }
 

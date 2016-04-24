@@ -79,7 +79,7 @@ int kv_server_read(int kv_descriptor){
 			//Insert value in the list
 			//Critical Region
 			pthread_rwlock_wrlock(&rwlock);
-            head = add_value(head, msg.key, value);
+            add_value(&head, msg.key, value);
             pthread_rwlock_unlock(&rwlock);
             printf(" Insert %s %u\n", value, msg.key);
 			break;
@@ -101,7 +101,7 @@ int kv_server_read(int kv_descriptor){
 			//Apagar value e key da lista
             //Critical Region
             pthread_rwlock_wrlock(&rwlock);
-            head=delete_value(head, msg.key);
+            delete_value(&head, msg.key);
             pthread_rwlock_unlock(&rwlock);
             
             printf(" Delete %u\n", msg.key);
