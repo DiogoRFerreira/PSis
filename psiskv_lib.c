@@ -11,32 +11,56 @@
 
 //Connect
 int kv_connect(char * kv_controler_ip,int kv_server_port){
-	int fd, n;
-	struct sockaddr_in addr;
-	
-	fd=socket(AF_INET,SOCK_STREAM,0);//TCP socket
-	if(fd==-1){
-		perror("Socket: ");//error
-		return -1;
-	}
-	//n=inet_aton(kv_controler_ip,&addr.sin_addr);
-	
-	memset((void*)&addr,(int)'\0',sizeof(addr));
-	addr.sin_family=AF_INET;
-	n=inet_aton(kv_controler_ip,&addr.sin_addr);
-	if(n==0){
-		printf("Invalid address");
-		return -1;
-	}
-	addr.sin_port=htons(kv_server_port);
-	
-	n=connect(fd,(struct sockaddr*)&addr,sizeof(addr));
-	if(n==-1){
-		perror("Connect: ");//error
-		return -1;
-	}
-	
-	return fd;
+    int fd;
+    struct sockaddr_in addr;
+    int port_dataserver;
+    long n;
+    
+    fd=socket(AF_INET,SOCK_STREAM,0);//TCP socket
+    if(fd==-1){
+        perror("Socket: ");
+        return -1;
+    }
+    
+    memset((void*)&addr,(int)'\0',sizeof(addr));
+    addr.sin_family=AF_INET;
+    n=inet_aton(kv_controler_ip,&addr.sin_addr);
+    if(n==0){
+        printf("Invalid address");
+        return -1;
+    }
+    
+    //Front Server Port
+    addr.sin_port=htons(9999);
+    
+    //Connect to Front Server
+    n=connect(fd,(struct sockaddr*)&addr,sizeof(addr));
+    if(n==-1){
+        perror("Connect: ");//error
+        return -1;
+    }
+    
+    //Receive port from Front Server
+    n=read(fd, &port_dataserver, sizeof(port_dataserver));
+    if(n<=0){
+        perror("Read: ");
+        return -1;
+    }
+    
+    //Close socket with Front Server
+    kv_close(fd);
+    
+    //Data Server Port
+    addr.sin_port=htons(port_dataserver);
+    
+    //Connect to Data Server
+    n=connect(fd,(struct sockaddr*)&addr,sizeof(addr));
+    if(n==-1){
+        perror("Connect: ");//error
+        return -1;
+    }
+    
+    return fd;
 }
 
 //Close
@@ -44,38 +68,50 @@ void kv_close(int kv_descriptor){
 	close(kv_descriptor);
 }
 
-//Insert -- Precisa de mudanças ver lab8
+//Insert
 int kv_write(int kv_descriptor, uint32_t key, char * value, uint32_t value_length, int kv_overwrite){
 	message msg;
-	msg.operation=1;
+    if (kv_overwrite == 0) msg.operation=1;
+    else if(kv_overwrite == 1) msg.operation=2;
 	msg.key=key;
 	msg.value_length=value_length;
 	long n;
-	
+    uint32_t returnvalue;
+    
+	//Send message with Op, key value length
 	n=write(kv_descriptor, &msg, sizeof(msg));
 	if(n<=0){
 		perror("Write: ");
 		return -1;
 	}
-	
+    
+	//Send message with value
 	n=write(kv_descriptor, value, value_length);
 	if(n<=0){
 		perror("Write: ");
 		return -1;
 	}
-	
-	return 0;
+    
+    //Overwrite 1
+    //returns 0, se concluir o overwrite ou seja a chave já existia no servidor
+    //Overwrite 0
+    //returns -2 se existir chave no servidor , retorna 0 em caso de sucesso
+    n=read(kv_descriptor, &returnvalue, sizeof(returnvalue));
+    if(n<=0){
+        perror("Read: ");
+        return -1;
+    }
+    
+	return returnvalue;
 }
 
 //Retrieve -- Precisa de mudanças ver amarelo lab8
 int kv_read(int kv_descriptor, uint32_t key, char * value, uint32_t value_length){
 	long n;
 	message msg;
-	msg.operation=2;
+	msg.operation=3;
 	msg.key=key;
 	msg.value_length=value_length;
-	
-	
 	
 	n=write(kv_descriptor, &msg, sizeof(msg));
 	if(n<=0){
@@ -97,7 +133,7 @@ int kv_read(int kv_descriptor, uint32_t key, char * value, uint32_t value_length
 int kv_delete(int kv_descriptor, uint32_t key){
 	long n;
 	message msg;
-	msg.operation=3;
+	msg.operation=4;
 	msg.key=key;
 	msg.value_length=0;
 	

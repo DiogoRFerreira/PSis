@@ -21,7 +21,7 @@ int main(){
         if(fd==-1) exit(1);
 
         //Insert
-        error=kv_write(fd, key, value, value_length);
+        error=kv_write(fd, key, value, value_length,0);
         if(error==-1) exit(2);
         //Retrieve
         error=kv_read(fd, key, value, value_length);
