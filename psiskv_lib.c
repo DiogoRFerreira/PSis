@@ -21,7 +21,7 @@ int kv_connect(char * kv_controler_ip,int kv_server_port){
         perror("Socket: ");
         return -1;
     }
-    
+    printf("--Socket fd: %d\n",fd);
     memset((void*)&addr,(int)'\0',sizeof(addr));
     addr.sin_family=AF_INET;
     n=inet_aton(kv_controler_ip,&addr.sin_addr);
@@ -39,19 +39,27 @@ int kv_connect(char * kv_controler_ip,int kv_server_port){
         perror("Connect: ");//error
         return -1;
     }
-    
+    printf("--Connect fd: %d\n",fd);
+    printf("--Connected to FS\n");
     //Receive port from Front Server
     n=read(fd, &port_dataserver, sizeof(port_dataserver));
     if(n<=0){
         perror("Read: ");
         return -1;
     }
-    
+    printf("--Port received: %d\n",port_dataserver);
     //Close socket with Front Server
     kv_close(fd);
+    printf("--After close fd: %d\n",fd);
     
     //Data Server Port
     addr.sin_port=htons(port_dataserver);
+    
+    fd=socket(AF_INET,SOCK_STREAM,0);//TCP socket - necessário senão dá erro Bad file descriptor no connect
+    if(fd==-1){
+        perror("Socket: ");
+        return -1;
+    }
     
     //Connect to Data Server
     n=connect(fd,(struct sockaddr*)&addr,sizeof(addr));
@@ -59,12 +67,13 @@ int kv_connect(char * kv_controler_ip,int kv_server_port){
         perror("Connect: ");//error
         return -1;
     }
-    
+    printf("--Connected to DS\n");
     return fd;
 }
 
 //Close
 void kv_close(int kv_descriptor){
+    printf("--Close this fd: %d\n",kv_descriptor);
 	close(kv_descriptor);
 }
 
@@ -78,7 +87,7 @@ int kv_write(int kv_descriptor, uint32_t key, char * value, uint32_t value_lengt
 	long n;
     uint32_t returnvalue;
     
-	//Send message with Op, key value length
+	//Send message with Operation, key value length
 	n=write(kv_descriptor, &msg, sizeof(msg));
 	if(n<=0){
 		perror("Write: ");
@@ -105,7 +114,7 @@ int kv_write(int kv_descriptor, uint32_t key, char * value, uint32_t value_lengt
 	return returnvalue;
 }
 
-//Retrieve -- Precisa de mudanças ver amarelo lab8
+//Retrieve
 int kv_read(int kv_descriptor, uint32_t key, char * value, uint32_t value_length){
 	long n;
 	message msg;
@@ -113,12 +122,14 @@ int kv_read(int kv_descriptor, uint32_t key, char * value, uint32_t value_length
 	msg.key=key;
 	msg.value_length=value_length;
 	
+    //Send message with Operation, key value length
 	n=write(kv_descriptor, &msg, sizeof(msg));
 	if(n<=0){
 		perror("Write: ");
 		return -1;
 	}
-
+    
+    //Receives message with value
 	n=read(kv_descriptor, value, value_length);
 	if(n<=0){
 		perror("Read: ");
@@ -132,6 +143,7 @@ int kv_read(int kv_descriptor, uint32_t key, char * value, uint32_t value_length
 //Delete
 int kv_delete(int kv_descriptor, uint32_t key){
 	long n;
+    int returnvalue;
 	message msg;
 	msg.operation=4;
 	msg.key=key;
@@ -142,6 +154,11 @@ int kv_delete(int kv_descriptor, uint32_t key){
 		perror("Write: ");
 		return -1;
 	}
+    n=read(kv_descriptor, &returnvalue, sizeof(returnvalue));
+    if(n<=0){
+        perror("Read: ");
+        return -1;
+    }
 	
-	return 0;
+	return returnvalue;
 }

@@ -43,7 +43,7 @@ int kv_server_listen(int kv_server_port){
 }
 
 int kv_server_accept(int fd){
-	printf("fd %d\n", fd);
+	//printf("fd: %d\n", fd);
 	int newfd;
 	struct sockaddr_in addr;
 	socklen_t addrlen;
@@ -52,7 +52,7 @@ int kv_server_accept(int fd){
 		perror("Accept: ");
 		return -1;
 	}
-	
+    //printf("newfd: %d\n", newfd);
 	return newfd;
 }
 
@@ -66,11 +66,11 @@ int kv_server_read(int kv_descriptor){
 		return -1;
 	}
 	
-
+    printf("Chegou aqui\n");
     char * value=(char*)malloc(msg.value_length*sizeof(char));
     
 	switch(msg.operation){
-		case 1://Insert
+		case 1://Insert without overwrite(0)
 			n=read(kv_descriptor, value, msg.value_length);
 			if(n<=0){
 				perror("Read: ");
@@ -82,11 +82,22 @@ int kv_server_read(int kv_descriptor){
             add_value(&head, msg.key, value);
             pthread_rwlock_unlock(&rwlock);
             printf(" Insert %s %u\n", value, msg.key);
+            //Sucess or not
+            int teste=1;//para experimentar
+            n=write(kv_descriptor, &teste, sizeof(teste) );
+            if(n<=0){
+                perror("Write: ");
+                return -1;
+            }
 			break;
-		case 2://Retrieve
+        case 2://Insert with overwrite(1)
+            break;
+		case 3://Retrieve
 			//Search value in the list
 			//Critical Region
+            printf("Antes da critical region\n");
 			pthread_rwlock_rdlock(&rwlock);
+            printf("Entrou na critical region\n");
             value=read_value(head, msg.key);
             pthread_rwlock_unlock(&rwlock);
             
@@ -97,13 +108,21 @@ int kv_server_read(int kv_descriptor){
 				return -1;
 			}
 			break;
-		case 3://Delete
+		case 4://Delete
 			//Apagar value e key da lista
             //Critical Region
             pthread_rwlock_wrlock(&rwlock);
+            printf("Delete value inside critical region\n");
             delete_value(&head, msg.key);
             pthread_rwlock_unlock(&rwlock);
-            
+            //Sucess or not
+            printf("Aqui2");
+            int teste1=1;//para experimentar
+            n=write(kv_descriptor, &teste1, sizeof(teste1) );
+            if(n<=0){
+                perror("Write: ");
+                return -1;
+            }
             printf(" Delete %u\n", msg.key);
 			break;
 	}

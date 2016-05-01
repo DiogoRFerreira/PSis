@@ -109,13 +109,14 @@ void delete_value(node ** head, uint32_t key){
     while (current!=NULL) {
         if (key == current->key) {
             if (current->next == NULL && previous==current) {
-                head = NULL;
+                *head = NULL;
             }else if (previous==current){
                 *head = current->next;
             }else{
                 previous->next = current->next;
             }
             free(current);
+            current = NULL;
         }else{
 			previous = current;
 			current = current->next;
