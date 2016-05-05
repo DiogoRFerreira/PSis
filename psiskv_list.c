@@ -39,19 +39,18 @@ char * read_value(node * head, uint32_t key){
 }
 
 // Insert
-void add_value(node ** head, uint32_t key, char * value) {
+uint32_t add_value(node ** head, uint32_t key, char * value, int overwrite) {
 
     node * current, * previous;
     node * new_element = (node*)malloc(sizeof(node));
         new_element->key=key;
         new_element->value=value;
-    
+    uint32_t returnvalue=0;
     int added=0;
 
 	if((*head)==NULL){ //Lista vazia
 		(*head) = new_element;
 		(*head)->next = NULL;
-        // (*num_elements_ptr)++;
     }else if((*head)->next==NULL){ //Só existe um elemento na lista
         if (key > (*head)->key){
             (*head)->next = new_element;
@@ -59,10 +58,16 @@ void add_value(node ** head, uint32_t key, char * value) {
         }else if(key < (*head)->key){
             new_element->next = *head;
             *head = new_element;
-        }else{
-            char * temporary = (char*)malloc((strlen(value)+strlen((*head)->value))*sizeof(char));
-            sprintf(temporary, "%s%s", (*head)->value, value);
-            (*head)->value = temporary;//
+        }else{//(key == (*head)->key)
+            //char * temporary = (char*)malloc((strlen(value)+strlen((*head)->value))*sizeof(char));
+            //sprintf(temporary, "%s%s", (*head)->value, value);
+            //(*head)->value = temporary;
+            if(overwrite == 0)returnvalue=-2;
+            else if(overwrite == 1){
+                char * temporary = (char*)malloc(strlen(value)*sizeof(char));
+                strcpy(temporary,value);
+                (*head)->value=temporary;
+            }
         }
 	}else{ 	//Mais do que um elemento na lista
         // Initialize pointers
@@ -71,9 +76,15 @@ void add_value(node ** head, uint32_t key, char * value) {
         
 		while (added!=1) {
 			if(current->key==key) {		// Found element with key
-				char * temporary = (char*)malloc((strlen(value)+strlen(current->value))*sizeof(char));
-				sprintf(temporary, "%s%s", current->value, value);
-                current->value = temporary;//
+				//char * temporary = (char*)malloc((strlen(value)+strlen(current->value))*sizeof(char));
+				//sprintf(temporary, "%s%s", current->value, value);
+                //current->value = temporary;//
+                if(overwrite == 0)returnvalue=-2;
+                else if(overwrite == 1){
+                    char * temporary = (char*)malloc(strlen(value)*sizeof(char));
+                    strcpy(temporary,value);
+                    current->value=temporary;
+                }
                 added=1;
 
 			}else if (current->key < key) {
@@ -97,13 +108,14 @@ void add_value(node ** head, uint32_t key, char * value) {
 			}
 		}
 	}
-    //return *head;
+    return returnvalue;
 }
 
 // Delete
-void delete_value(node ** head, uint32_t key){
+uint32_t delete_value(node ** head, uint32_t key){
     
     node * previous, * current = *head;
+    uint32_t deleted=0;
     
     previous = current;
     while (current!=NULL) {
@@ -117,11 +129,12 @@ void delete_value(node ** head, uint32_t key){
             }
             free(current);
             current = NULL;
+            deleted=1;
         }else{
 			previous = current;
 			current = current->next;
         }
     }
-    //return head;
+    return deleted;
 }
 

@@ -59,6 +59,7 @@ int kv_server_accept(int fd){
 int kv_server_read(int kv_descriptor){
 	message msg;
 	long n;
+    uint32_t returnvalue;
 	
 	n=read(kv_descriptor, &msg, sizeof(msg));
 	if(n<=0){
@@ -69,64 +70,63 @@ int kv_server_read(int kv_descriptor){
     printf("Chegou aqui\n");
     char * value=(char*)malloc(msg.value_length*sizeof(char));
     
-	switch(msg.operation){
-		case 1://Insert without overwrite(0)
-			n=read(kv_descriptor, value, msg.value_length);
-			if(n<=0){
-				perror("Read: ");
-				return -1;
-			}
-			//Insert value in the list
-			//Critical Region
-			pthread_rwlock_wrlock(&rwlock);
-            add_value(&head, msg.key, value);
-            pthread_rwlock_unlock(&rwlock);
-            printf(" Insert %s %u\n", value, msg.key);
-            //Sucess or not
-            int teste=1;//para experimentar
-            n=write(kv_descriptor, &teste, sizeof(teste) );
-            if(n<=0){
-                perror("Write: ");
-                return -1;
-            }
-			break;
-        case 2://Insert with overwrite(1)
-            break;
-		case 3://Retrieve
-			//Search value in the list
-			//Critical Region
-            printf("Antes da critical region\n");
-			pthread_rwlock_rdlock(&rwlock);
-            printf("Entrou na critical region\n");
-            value=read_value(head, msg.key);
-            pthread_rwlock_unlock(&rwlock);
-            
-            printf(" Retrieve %s %u\n", value, msg.key);
-			n=write(kv_descriptor, value, msg.value_length);
-			if(n<=0){
-				perror("Write: ");
-				return -1;
-			}
-			break;
-		case 4://Delete
-			//Apagar value e key da lista
-            //Critical Region
-            pthread_rwlock_wrlock(&rwlock);
-            printf("Delete value inside critical region\n");
-            delete_value(&head, msg.key);
-            pthread_rwlock_unlock(&rwlock);
-            //Sucess or not
-            printf("Aqui2");
-            int teste1=1;//para experimentar
-            n=write(kv_descriptor, &teste1, sizeof(teste1) );
-            if(n<=0){
-                perror("Write: ");
-                return -1;
-            }
-            printf(" Delete %u\n", msg.key);
-			break;
+	if(msg.operation==1||msg.operation==2){//Insert
+		int overwrite=0;
+        n=read(kv_descriptor, value, msg.value_length);
+        if(n<=0){
+            perror("Read: ");
+            return -1;
+        }
+        
+        if(msg.operation==1) overwrite=0;//Insert without overwrite(0)--1
+        else if(msg.operation==2) overwrite=1;//Insert with overwrite(1)--2
+        //Insert value in the list
+        //Critical Region
+        pthread_rwlock_wrlock(&rwlock);
+        returnvalue=add_value(&head, msg.key, value, overwrite);
+        pthread_rwlock_unlock(&rwlock);
+        printf(" Insert %s %u\n", value, msg.key);
+        //Sucess or not
+        n=write(kv_descriptor, &returnvalue, sizeof(returnvalue) );
+        if(n<=0){
+            perror("Write: ");
+            return -1;
+        }
+    }
+    if(msg.operation== 3){//Retrieve
+        //Search value in the list
+        //Critical Region
+        printf("Antes da critical region\n");
+        pthread_rwlock_rdlock(&rwlock);
+        printf("Entrou na critical region\n");
+        value=read_value(head, msg.key);
+        pthread_rwlock_unlock(&rwlock);
+        printf(" Retrieve %s %u\n", value, msg.key);
+        n=write(kv_descriptor, value, msg.value_length);
+        if(n<=0){
+            perror("Write: ");
+            return -1;
+        }
+    }
+    if(msg.operation==  4){//Delete
+        uint32_t returnvalue;
+        //Apagar value e key da lista
+        //Critical Region
+        pthread_rwlock_wrlock(&rwlock);
+        printf("Delete value inside critical region\n");
+        returnvalue=delete_value(&head, msg.key);
+        pthread_rwlock_unlock(&rwlock);
+        //Sucess or not
+        n=write(kv_descriptor, &returnvalue, sizeof(returnvalue));
+        if(n<=0){
+            perror("Write: ");
+            return -1;
+        }
+        printf(" Delete %u\n", msg.key);
 	}
+    
 	print_list(head);
 	
 	return 0;
 }
+

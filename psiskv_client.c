@@ -7,7 +7,7 @@
 
 int main(){
 
-	char * kv_controler_ip = "192.168.1.6";
+	char * kv_controler_ip = "192.168.1.4";
 	char * value = (char*)malloc(15*sizeof(char));
 	strcpy(value,"olaola");
 	

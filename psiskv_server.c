@@ -11,6 +11,34 @@
 
 pthread_rwlock_t	rwlock;
 
+//Data Server Threads
+void DSclient_handler ( void *ptr )//Recebe o connect e envia o porto do dataserver
+{
+    int *fd, close=0;
+    fd = (int*) ptr;  // type cast to a pointer to int
+    
+    //SIGPIPE signal
+    void (*old_handler)(int);//interrupt handler
+    if((old_handler=signal(SIGPIPE,SIG_IGN))==SIG_ERR)exit(1);//error
+    
+    while(close==0){
+        printf("Data Server Thread Server Read\n");
+        close=kv_server_read(*fd);
+        printf("close: %d\n", close);
+    }
+    
+}
+
+void DSbackuplog_handler (void * ptr)
+{
+    
+}
+
+void DSstate_handler (void * ptr)
+{
+    
+}
+
 //Front Server Threads
 void FSclient_handler ( void * ptr )//Recebe o connect e envia o porto do dataserver
 {
@@ -36,69 +64,71 @@ void FSstate_handler ( void *ptr )//Verifica o estado do data server
     
 }
 
-//Data Server Threads
-void DSclient_handler ( void *ptr )//Recebe o connect e envia o porto do dataserver
+void FSinput_handler ( void *ptr )//Recebe inputs
 {
-    int *fd, close=0;
-    fd = (int*) ptr;  // type cast to a pointer to int
-    
-    //SIGPIPE signal
-    void (*old_handler)(int);//interrupt handler
-    if((old_handler=signal(SIGPIPE,SIG_IGN))==SIG_ERR)exit(1);//error
-    
-    while(close==0){
-        printf("Data Server Thread Server Read\n");
-        close=kv_server_read(*fd);
-        printf("close: %d\n", close);
+    char buffer[128];
+    while(1){
+        fgets(buffer, 128, stdin);
+        printf("%s",buffer);
     }
-    
 }
+
 
 int main(){
 	
 	int fd1,fd2, kv_descriptor1,kv_descriptor2;//File Descriptors
-    pthread_t thread1,thread2;//Threads
+    pthread_t thread1, thread2, thread3, thread4, thread5 ,thread6;//Threads
     pid_t pid;
-    //char line[128];
+    FILE * fp=NULL;
+    
+    //Initialize Read/Write Mutex
+    printf("Initialize the read write lock\n");
+    pthread_rwlock_init(&rwlock, NULL);
     
     //Front Server & Data Server
     pid=fork();
     
     if(pid==0){//Filho - Data Server
-        //Initialize Read/Write Mutex
-        printf("Initialize the read write lock\n");
-        pthread_rwlock_init(&rwlock, NULL);
+        //Thread - Verificar o estado do Front Server
+        if(pthread_create(&thread1, NULL, (void *) &DSstate_handler, (void *) NULL)) {
+            printf("Error creating thread\n");
+        }
+        //Thread - Escrever o backup e o log
+        if(pthread_create(&thread2, NULL, (void *) &DSbackuplog_handler, (void *) fp)) {
+            printf("Error creating thread\n");
+        }
+        
         printf("Data Server Listen with pid %d\n",getpid());
         fd1=kv_server_listen(KV_PORT_DS);
         while(1){
             //Thread - Receber clientes
             kv_descriptor1 = kv_server_accept(fd1);
             printf("Data Server Accept\n");
-            if(pthread_create(&thread1, NULL, (void *) &DSclient_handler, (void *) &kv_descriptor1)) {
+            if(pthread_create(&thread3, NULL, (void *) &DSclient_handler, (void *) &kv_descriptor1)) {
                 printf("Error creating thread\n");
             }
-            //Thread - Verificar o estado do Front Server
-            //Thread - Escrever o backup e o log
         }
     }else{//Pai - Front Server
         printf("Front Server Listen with pid %d\n",getpid());
+        
         //Thread - Verificar estado do Data Server
-        if(pthread_create(&thread2, NULL, (void *) &FSstate_handler, (void *) &kv_descriptor2)) {
+        if(pthread_create(&thread4, NULL, (void *) &FSstate_handler, (void *) NULL)){
             printf("Error creating thread\n");
         }
+        
+        //Thread - Receber comandos do teclado
+        if(pthread_create(&thread5, NULL, (void *) &FSinput_handler, (void *) NULL)){
+            printf("Error creating thread\n");
+        }
+        
         fd2=kv_server_listen(KV_PORT_FS);
         while(1){
             //Thread - Receber clientes
             kv_descriptor2 = kv_server_accept(fd2);
             printf("Front Server Accept, kv_descriptor: %d\n",kv_descriptor2);
-            if(pthread_create(&thread1, NULL, (void *) &FSclient_handler, (void *) &kv_descriptor2)) {
+            if(pthread_create(&thread6, NULL, (void *) &FSclient_handler, (void *) &kv_descriptor2)) {
                 printf("Error creating thread\n");
             }
         }
-        //Thread - Receber comandos do teclado
-        /*while(1){
-            fgets(line,128,stdin);
-            printf("%s\n",line);
-        }*/
     }
 }
