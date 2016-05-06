@@ -94,15 +94,11 @@ int kv_server_read(int kv_descriptor){
         }
     }
     if(msg.operation== 3){//Retrieve
-        //Search value in the list
-        //Critical Region
-        printf("Antes da critical region\n");
-        pthread_rwlock_rdlock(&rwlock);
-        printf("Entrou na critical region\n");
-        value=read_value(head, msg.key);
-        pthread_rwlock_unlock(&rwlock);
-        printf(" Retrieve %s %u\n", value, msg.key);
-        n=write(kv_descriptor, value, msg.value_length);
+
+        char *p = (char*)malloc(strlen(current->value)*sizeof(char));
+        value=read_value(&head, msg.key, &p);
+        printf(" Retrieve %s %u\n", p, msg.key);
+        n=write(kv_descriptor, value, sizeof(value));
         if(n<=0){
             perror("Write: ");
             return -1;

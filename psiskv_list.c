@@ -1,8 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "psiskv_list.h"
 #include <stdint.h>
 #include <string.h>
+#include <pthread.h>
+
+#include "psiskv_list.h"
+#include "psiskv_server.h"//mutex
 
 //Print of the list - just for debug
 void print_list(node * head){
@@ -20,22 +23,26 @@ void print_list(node * head){
 }
 
 // Retrieve value from list if it exists
-char * read_value(node * head, uint32_t key){
+uint32_t read_value(node ** head, uint32_t key, char ** p){
 
-    node * current = head;
-
-    if (current==NULL) {
-        printf("Empty list => Not on the list\n");
-    }else{
-		while (current!=NULL) {
-			if(current->key==key){
-                return current->value;
-            }
-            current=current->next;
-        }
-    }
+    node * current = (*head);
     
-    return NULL;
+    //Critical Region
+	pthread_rwlock_rdlock(&rwlock);
+	while (current!=NULL) {
+		if(current->key==key){
+			pthread_rwlock_unlock(&rwlock);
+			//Critical Region 2
+			pthread_rwlock_rdlock(&rwlock2);
+			printf("Entrou na critical region\n");
+			memcpy(*p, current->value, strlen(*p));
+			pthread_rwlock_unlock(&rwlock2);
+			return (uint32_t)(sizeof(current->value));
+        }
+        current=current->next;
+    }
+    pthread_rwlock_unlock(&rwlock);
+    return -2;
 }
 
 // Insert
@@ -51,6 +58,7 @@ uint32_t add_value(node ** head, uint32_t key, char * value, int overwrite) {
 	if((*head)==NULL){ //Lista vazia
 		(*head) = new_element;
 		(*head)->next = NULL;
+		
     }else if((*head)->next==NULL){ //Só existe um elemento na lista
         if (key > (*head)->key){
             (*head)->next = new_element;
@@ -68,7 +76,7 @@ uint32_t add_value(node ** head, uint32_t key, char * value, int overwrite) {
                 strcpy(temporary,value);
                 (*head)->value=temporary;
             }
-        }
+        }      
 	}else{ 	//Mais do que um elemento na lista
         // Initialize pointers
         current = *head;
@@ -118,8 +126,12 @@ uint32_t delete_value(node ** head, uint32_t key){
     uint32_t deleted=0;
     
     previous = current;
+    //Critical Region
+	pthread_rwlock_wrlock(&rwlock);
     while (current!=NULL) {
         if (key == current->key) {
+			//Critical Region 2
+			pthread_rwlock_wrlock(&rwlock2);
             if (current->next == NULL && previous==current) {
                 *head = NULL;
             }else if (previous==current){
@@ -127,14 +139,17 @@ uint32_t delete_value(node ** head, uint32_t key){
             }else{
                 previous->next = current->next;
             }
+            free(current->value);
             free(current);
             current = NULL;
             deleted=1;
+            pthread_rwlock_unlock(&rwlock2);
         }else{
 			previous = current;
 			current = current->next;
         }
     }
+    pthread_rwlock_unlock(&rwlock);
     return deleted;
 }
 

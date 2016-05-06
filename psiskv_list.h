@@ -13,7 +13,7 @@ typedef struct node {
 
 void print_list(node*head);
 
-char * read_value(node * head, uint32_t key);
+uint32_t read_value(node ** head, uint32_t key, char ** p);
 
 uint32_t add_value(node ** head, uint32_t key, char * value, int overwrite);
 

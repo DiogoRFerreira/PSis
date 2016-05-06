@@ -9,7 +9,8 @@
 #define KV_PORT_FS 9999
 #define KV_PORT_DS 10000
 
-pthread_rwlock_t	rwlock;
+pthread_rwlock_t	rwlock, rwlock2;
+pthread_mutex_t lock;
 
 //Data Server Threads
 void DSclient_handler ( void *ptr )//Recebe o connect e envia o porto do dataserver
@@ -29,7 +30,7 @@ void DSclient_handler ( void *ptr )//Recebe o connect e envia o porto do dataser
     
 }
 
-void DSbackuplog_handler (void * ptr)
+void DSbackup_handler (void * ptr)
 {
     
 }
@@ -79,11 +80,13 @@ int main(){
 	int fd1,fd2, kv_descriptor1,kv_descriptor2;//File Descriptors
     pthread_t thread1, thread2, thread3, thread4, thread5 ,thread6;//Threads
     pid_t pid;
-    FILE * fp=NULL;
+    FILE * fp= NULL;
     
-    //Initialize Read/Write Mutex
+    //Initialize Read/Writelocks & Mutex
     printf("Initialize the read write lock\n");
     pthread_rwlock_init(&rwlock, NULL);
+    pthread_rwlock_init(&rwlock2, NULL);
+    pthread_mutex_init(&lock, NULL);
     
     //Front Server & Data Server
     pid=fork();
@@ -94,7 +97,7 @@ int main(){
             printf("Error creating thread\n");
         }
         //Thread - Escrever o backup e o log
-        if(pthread_create(&thread2, NULL, (void *) &DSbackuplog_handler, (void *) fp)) {
+        if(pthread_create(&thread2, NULL, (void *) &DSbackup_handler, (void *) fp)) {
             printf("Error creating thread\n");
         }
         
