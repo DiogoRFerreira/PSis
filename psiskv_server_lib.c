@@ -13,7 +13,7 @@
 #include "psiskv_list.h"
 
 node * head = NULL;
-
+int i = 0;
 
 int kv_server_listen(int kv_server_port){
 	int fd;
@@ -68,6 +68,7 @@ int kv_server_read(int kv_descriptor){
 	}
 	
     printf("Chegou aqui\n");
+    printf("---Msg: OP: %d key: %d value length: %d\n",msg.operation, msg.key, msg.value_length);
     char * value=(char*)malloc(msg.value_length*sizeof(char));
     
 	if(msg.operation==1||msg.operation==2){//Insert
@@ -82,36 +83,46 @@ int kv_server_read(int kv_descriptor){
         else if(msg.operation==2) overwrite=1;//Insert with overwrite(1)--2
         //Insert value in the list
         //Critical Region
-        pthread_rwlock_wrlock(&rwlock);
+        //pthread_rwlock_wrlock(&rwlock);
         returnvalue=add_value(&head, msg.key, value, overwrite);
-        pthread_rwlock_unlock(&rwlock);
+        //pthread_rwlock_unlock(&rwlock);
         printf(" Insert %s %u\n", value, msg.key);
         //Sucess or not
-        n=write(kv_descriptor, &returnvalue, sizeof(returnvalue) );
+        n=write(kv_descriptor, &returnvalue, sizeof(returnvalue));
         if(n<=0){
             perror("Write: ");
             return -1;
         }
     }
-    if(msg.operation== 3){//Retrieve
+    if(msg.operation == 3){//Retrieve
 
-        char *p = (char*)malloc(strlen(current->value)*sizeof(char));
-        value=read_value(&head, msg.key, &p);
+        char *p = (char*)malloc(msg.value_length*sizeof(char));
+        returnvalue=read_value(&head, msg.key, &p);
         printf(" Retrieve %s %u\n", p, msg.key);
-        n=write(kv_descriptor, value, sizeof(value));
+        
+        //Envia o valor para ler
+        n=write(kv_descriptor, &returnvalue, sizeof(returnvalue));
         if(n<=0){
             perror("Write: ");
             return -1;
+        }
+        //A chave existe envia
+        if(returnvalue>0){
+            n=write(kv_descriptor, p, sizeof(p));
+            if(n<=0){
+                perror("Write: ");
+                return -1;
+            }
         }
     }
     if(msg.operation==  4){//Delete
         uint32_t returnvalue;
         //Apagar value e key da lista
         //Critical Region
-        pthread_rwlock_wrlock(&rwlock);
+        //pthread_rwlock_wrlock(&rwlock);
         printf("Delete value inside critical region\n");
         returnvalue=delete_value(&head, msg.key);
-        pthread_rwlock_unlock(&rwlock);
+        //pthread_rwlock_unlock(&rwlock);
         //Sucess or not
         n=write(kv_descriptor, &returnvalue, sizeof(returnvalue));
         if(n<=0){

@@ -55,11 +55,16 @@ uint32_t add_value(node ** head, uint32_t key, char * value, int overwrite) {
     uint32_t returnvalue=0;
     int added=0;
 
+    //Critical Region
+    pthread_rwlock_rdlock(&rwlock);//Lock de leitura para correr a lista
+    pthread_mutex_lock(&lock);//Só um add de cada vez
 	if((*head)==NULL){ //Lista vazia
+        pthread_rwlock_wrlock(&rwlock2);//Lock de escrita para inserir na lista
 		(*head) = new_element;
 		(*head)->next = NULL;
-		
+		pthread_rwlock_unlock(&rwlock2);
     }else if((*head)->next==NULL){ //Só existe um elemento na lista
+        pthread_rwlock_wrlock(&rwlock2);
         if (key > (*head)->key){
             (*head)->next = new_element;
             new_element->next = NULL;
@@ -76,7 +81,8 @@ uint32_t add_value(node ** head, uint32_t key, char * value, int overwrite) {
                 strcpy(temporary,value);
                 (*head)->value=temporary;
             }
-        }      
+        }
+        pthread_rwlock_unlock(&rwlock2);
 	}else{ 	//Mais do que um elemento na lista
         // Initialize pointers
         current = *head;
@@ -91,7 +97,9 @@ uint32_t add_value(node ** head, uint32_t key, char * value, int overwrite) {
                 else if(overwrite == 1){
                     char * temporary = (char*)malloc(strlen(value)*sizeof(char));
                     strcpy(temporary,value);
+                    pthread_rwlock_wrlock(&rwlock2);
                     current->value=temporary;
+                    pthread_rwlock_unlock(&rwlock2);
                 }
                 added=1;
 
@@ -100,11 +108,14 @@ uint32_t add_value(node ** head, uint32_t key, char * value, int overwrite) {
 					previous = current;
 					current = current->next;
 				} else {
+                    pthread_rwlock_wrlock(&rwlock2);
 					current->next = new_element;
+                    pthread_rwlock_unlock(&rwlock2);
 					current->next->next = NULL;
                     added=1;
 				}
             }else if(current->key > key){
+                pthread_rwlock_wrlock(&rwlock2);
                 new_element->next = current;
 				if (*head == current) {
 					*head = new_element;
@@ -112,10 +123,14 @@ uint32_t add_value(node ** head, uint32_t key, char * value, int overwrite) {
 					previous->next = new_element;
                     previous->next->next=current;
 				}
+                pthread_rwlock_unlock(&rwlock2);
 				added=1;
 			}
 		}
 	}
+    pthread_mutex_unlock(&lock);
+    pthread_rwlock_unlock(&rwlock);
+    
     return returnvalue;
 }
 

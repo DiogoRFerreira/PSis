@@ -2,6 +2,8 @@
 #include "psiskv_list.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
 #include <unistd.h>     // SOCKET
 #include <pthread.h>    // POSIX Threads
 #include <signal.h>     // SIGPIPE
@@ -9,8 +11,11 @@
 #define KV_PORT_FS 9999
 #define KV_PORT_DS 10000
 
-pthread_rwlock_t	rwlock, rwlock2;
+#define NUMBERLOGS 100 //number of writes in the log file before writing backup file again
+
+pthread_rwlock_t rwlock, rwlock2;
 pthread_mutex_t lock;
+
 
 //Data Server Threads
 void DSclient_handler ( void *ptr )//Recebe o connect e envia o porto do dataserver
@@ -32,7 +37,22 @@ void DSclient_handler ( void *ptr )//Recebe o connect e envia o porto do dataser
 
 void DSbackup_handler (void * ptr)
 {
+    FILE * fp;
+    node * current;
     
+    if((fp=fopen("backup1.txt","w"))==NULL){
+        perror("File: ");
+    }else{
+        pthread_rwlock_rdlock(&rwlock);//Enquanto faz backup só podem ler da lista
+        current=head;
+        while(current->next!=NULL){
+            fprintf(fp,"%u %lu",current->key ,strlen(current->value));
+            fprintf(fp,"%s",current->value);
+            
+        }
+        fclose(fp);
+        pthread_rwlock_unlock(&rwlock);
+    }
 }
 
 void DSstate_handler (void * ptr)
@@ -71,6 +91,12 @@ void FSinput_handler ( void *ptr )//Recebe inputs
     while(1){
         fgets(buffer, 128, stdin);
         printf("%s",buffer);
+        if(strncmp(buffer,"quit",4)==0){
+            //quit command or press Ctr-C. In these cases both the Front and Data Servers will be orderly terminated.
+            exit(0);
+        }else if(strncmp(buffer,"print",5)==0){
+            print_list(head);
+        }
     }
 }
 
@@ -80,7 +106,12 @@ int main(){
 	int fd1,fd2, kv_descriptor1,kv_descriptor2;//File Descriptors
     pthread_t thread1, thread2, thread3, thread4, thread5 ,thread6;//Threads
     pid_t pid;
-    FILE * fp= NULL;
+    FILE * fp;
+    char singleLine[150];
+    //Rescontrução da lista a partir do backup
+    uint32_t keybackup, keylog, value_lengthbackup, value_lengthlog;
+    uint8_t operationbackup;
+    uint32_t sucessbackup, sucesslog;
     
     //Initialize Read/Writelocks & Mutex
     printf("Initialize the read write lock\n");
@@ -97,8 +128,44 @@ int main(){
             printf("Error creating thread\n");
         }
         //Thread - Escrever o backup e o log
-        if(pthread_create(&thread2, NULL, (void *) &DSbackup_handler, (void *) fp)) {
+        if(pthread_create(&thread2, NULL, (void *) &DSbackup_handler, (void *) NULL)) {
             printf("Error creating thread\n");
+        }
+        //Ler dados do backup e do log e
+        if((fp=fopen("backup.txt","r"))==NULL){
+            perror("File: ");
+        }else{
+            printf("Restaurando lista a partir do backup!\n");
+            while(!feof(fp)){//Ler o backup
+                fgets(singleLine,150, fp);
+                sscanf(singleLine,"%u %u", &keylog, &value_lengthlog);
+                printf("key: %u, value_length: %u",keylog, value_lengthlog);
+                char *valuelog = (char*)malloc(value_lengthlog*sizeof(char));
+                fgets(valuelog,value_lengthlog, fp);
+                printf("Value: %s\n",valuelog);
+                sucesslog=add_value(&head, keylog, valuelog, 1);
+            }
+            fclose(fp);
+        }
+        if((fp=fopen("log.txt","r"))==NULL){
+            perror("File: ");
+        }else{
+            printf("Restaurando lista a partir do log!\n");
+           while(!feof(fp)){//Ler o log e inserir na lista
+                fgets(singleLine, 150, fp);
+                sscanf(singleLine,"%s %u %u",&operationbackup, &keybackup, &value_lengthbackup);
+                if(operationbackup == 1 || operationbackup == 2){
+                    fgets(singleLine, 150, fp);
+                    printf("op: %u, key: %u, length: %u",operationbackup, keybackup, value_lengthbackup);
+                    printf("Value: %s\n",singleLine);
+                    if (operationbackup==1) sucessbackup=add_value(&head, keybackup, singleLine, 0);
+                    if (operationbackup==2) sucessbackup=add_value(&head, keybackup, singleLine, 1);
+                }
+                else if(operationbackup==4){
+                    sucessbackup=delete_value(&head, keybackup);
+                }
+            }
+            fclose(fp);
         }
         
         printf("Data Server Listen with pid %d\n",getpid());

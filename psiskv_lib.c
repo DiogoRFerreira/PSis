@@ -121,6 +121,7 @@ int kv_read(int kv_descriptor, uint32_t key, char * value, uint32_t value_length
 	msg.operation=3;
 	msg.key=key;
 	msg.value_length=value_length;
+    int newlength=0;
 	
     //Send message with Operation, key value length
 	n=write(kv_descriptor, &msg, sizeof(msg));
@@ -129,14 +130,26 @@ int kv_read(int kv_descriptor, uint32_t key, char * value, uint32_t value_length
 		return -1;
 	}
     
-    //Receives message with value
-	n=read(kv_descriptor, value, value_length);
-	if(n<=0){
-		perror("Read: ");
-		return -1;
-	}
-    if(value==NULL)return -2;
-    //Supostamente retorna o length of the value store
+    //Receives message with value_length of the stored value
+    n=read(kv_descriptor, &newlength, sizeof(newlength));
+    if(n<=0){
+        perror("Read: ");
+        return -1;
+    }
+    
+    if(newlength>0){
+        //Receives message with value
+        char * newvalue = (char*)malloc(newlength*sizeof(char));
+        n=read(kv_descriptor, newvalue, newlength);
+        if(n<=0){
+                perror("Read: ");
+                return -1;
+        }
+    }else{
+        return -2;
+    }
+    
+        
 	return 0;
 }
 
