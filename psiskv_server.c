@@ -209,50 +209,70 @@ void mainDataServer(){
 	int kv_descriptorDS;
 	//Rescontrução da lista a partir do backup
 	uint32_t keybackup, keylog, value_lengthbackup, value_lengthlog;
-	uint8_t operationbackup;
-	uint32_t sucessbackup, sucesslog;
-
+	uint32_t sucessbackup, sucesslog, operationlog;
+	
 	//Thread - Verificar o estado do Front Server
 	if(pthread_create(&thread1, NULL, (void *) &DSstate_handler, (void *) NULL)) {
 		printf("Error creating thread\n");
 	}
+	
 	//Thread - Escrever o backup e o log
 	if(pthread_create(&thread2, NULL, (void *) &DSbackup_handler, (void *) NULL)) {
 		printf("Error creating thread\n");
 	}
-	//Ler dados do backup e do log e
-	if((fp=fopen("backup.txt","r"))==NULL){
+
+	//Ler dados do Backup
+	if((fp=fopen("backup.txt","r")) == NULL){
 		perror("File: ");
 	}else{
 		printf("Restaurando lista a partir do backup!\n");
-		while(!feof(fp)){//Ler o backup
-			fgets(singleLine,150, fp);
-			sscanf(singleLine,"%u %u", &keylog, &value_lengthlog);
-			printf("key: %u, value_length: %u",keylog, value_lengthlog);
-			char *valuelog = (char*)malloc(value_lengthlog*sizeof(char));
-			fgets(valuelog,value_lengthlog, fp);
-			printf("Value: %s\n",valuelog);
-			sucesslog=add_value(keylog, valuelog, 1);
+
+		int i=1;
+		char * valuebackup;
+		while (fgets(singleLine, 150, fp)!=NULL){
+			//printf("Aquiiii\n");
+        	//printf("%s",singleLine);
+        	//printf("%lu\n",strlen(singleLine)-1);
+        	if(i==1){
+	        	sscanf(singleLine,"%u %u", &keybackup, &value_lengthbackup);
+	        //	printf("--key: %u, value_length: %u\n", keybackup, value_lengthbackup);
+	        	valuebackup = (char*)malloc(value_lengthbackup*(sizeof(char)));
+	        	i=2;
+	        }else if(i==2){
+	        	sscanf(singleLine,"%s",valuebackup);
+	        //	printf("%s\n", valuebackup);
+	        	sucessbackup = add_value(keybackup, valuebackup, 0);
+	        	free(valuebackup);
+	        	i=1;
+	        }
 		}
 		fclose(fp);
 	}
+
+	//Ler dados do Log
 	if((fp=fopen("log.txt","r"))==NULL){
 		perror("File: ");
 	}else{
 		printf("Restaurando lista a partir do log!\n");
-	   while(!feof(fp)){//Ler o log e inserir na lista
-			fgets(singleLine, 150, fp);
-			sscanf(singleLine,"%s %u %u",&operationbackup, &keybackup, &value_lengthbackup);
-			if(operationbackup == 1 || operationbackup == 2){
+		char * valuelog;
+	    while(fgets(singleLine, 150, fp)!= NULL){//Ler o log e inserir na lista
+	   		//printf("%s",singleLine);
+			sscanf(singleLine,"%u %u %u",&operationlog, &keylog, &value_lengthlog);
+			//printf("OP: %u , K: %u, V: %u\n",operationlog, keylog, value_lengthlog);
+			if(operationlog == 1 || operationlog == 2){
 				fgets(singleLine, 150, fp);
-				printf("op: %u, key: %u, length: %u",operationbackup, keybackup, value_lengthbackup);
-				printf("Value: %s\n",singleLine);
-				if (operationbackup==1) sucessbackup= add_value(keybackup, singleLine, 0);
-				if (operationbackup==2) sucessbackup= add_value(keybackup, singleLine, 1);
+			//	printf("op: %u, key: %u, length: %u",operationlog, keylog, value_lengthlog);
+			//	printf("Value: %s\n",singleLine);
+				valuelog = (char*)malloc(value_lengthlog*(sizeof(char)));
+				sscanf(singleLine,"%s",valuelog);
+				if (operationlog==1) sucesslog = add_value(keylog, valuelog, 0);
+				if (operationlog==2) sucesslog = add_value(keylog, valuelog, 1);
+				free(valuelog);
 			}
-			else if(operationbackup==4){
-				sucessbackup=delete_value(keybackup);
+			else if(operationlog==4){
+				sucesslog = delete_value(keylog);
 			}
+			//printf("Sucess: %u\n",sucesslog);
 		}
 		fclose(fp);
 	}

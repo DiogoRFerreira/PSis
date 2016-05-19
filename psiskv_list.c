@@ -53,7 +53,10 @@ uint32_t add_value(uint32_t key, char * value, int overwrite) {
     node * current, * previous;
     node * new_element = (node*)malloc(sizeof(node));
         new_element->key=key;
-        new_element->value=value;
+        //copy value
+        char * temporary = (char*)malloc(strlen(value)*sizeof(char));
+        strcpy(temporary,value);
+        new_element->value=temporary;
     uint32_t returnvalue=0;
     int added=0;
 
@@ -73,14 +76,9 @@ uint32_t add_value(uint32_t key, char * value, int overwrite) {
         }else if(key < head->key){
             new_element->next = head;
             head = new_element;
-        }else{//(key == (*head)->key)
-            //char * temporary = (char*)malloc((strlen(value)+strlen((*head)->value))*sizeof(char));
-            //sprintf(temporary, "%s%s", (*head)->value, value);
-            //(*head)->value = temporary;
+        }else{
             if(overwrite == 0)returnvalue=-2;
             else if(overwrite == 1){
-                char * temporary = (char*)malloc(strlen(value)*sizeof(char));
-                strcpy(temporary,value);
                 head->value=temporary;
             }
         }
@@ -92,9 +90,6 @@ uint32_t add_value(uint32_t key, char * value, int overwrite) {
         
 		while (added!=1) {
 			if(current->key==key) {		// Found element with key
-				//char * temporary = (char*)malloc((strlen(value)+strlen(current->value))*sizeof(char));
-				//sprintf(temporary, "%s%s", current->value, value);
-                //current->value = temporary;//
                 if(overwrite == 0)returnvalue=-2;
                 else if(overwrite == 1){
                     char * temporary = (char*)malloc(strlen(value)*sizeof(char));

@@ -12,7 +12,6 @@
 #include "psiskv_server_lib.h"
 #include "psiskv_list.h"
 
-int i = 0;
 
 int kv_server_listen(int kv_server_port){
 	int fd;
@@ -114,7 +113,7 @@ int kv_server_read(int kv_descriptor){
             }
         }
     }
-    if(msg.operation==  4){//Delete
+    if(msg.operation==4){//Delete
         uint32_t returnvalue;
         //Apagar value e key da lista
         //Critical Region
@@ -130,6 +129,25 @@ int kv_server_read(int kv_descriptor){
         }
         printf(" Delete %u\n", msg.key);
 	}
+
+    //Log Part
+    counter_log++;
+    FILE * fp;
+    if((fp=fopen("log.txt","a")) == NULL){
+        perror("File: ");
+    }else{
+        printf("Colocando instrução no log!\n");
+        if(msg.operation == 1|| msg.operation ==2){
+            fprintf(fp,"%d %u %u\n", msg.operation, msg.key, msg.value_length);
+            fprintf(fp,"%s", value);
+        }else if(msg.operation == 4){
+            fprintf(fp, "%d %u 0",msg.operation, msg.key);
+        }
+        
+        fclose(fp);
+    }
+
+    free(value);
     
 	print_list();
 	
