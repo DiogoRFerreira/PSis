@@ -7,8 +7,10 @@
 #include "psiskv_list.h"
 #include "psiskv_server.h"//mutex
 
+node * head = NULL;
+
 //Print of the list - just for debug
-void print_list(node * head){
+void print_list(){
     
     node * current = head;
     
@@ -23,9 +25,9 @@ void print_list(node * head){
 }
 
 // Retrieve value from list if it exists
-uint32_t read_value(node ** head, uint32_t key, char ** p){
+uint32_t read_value(uint32_t key, char ** p){
 
-    node * current = (*head);
+    node * current = head;
     
     //Critical Region
 	pthread_rwlock_rdlock(&rwlock);
@@ -46,7 +48,7 @@ uint32_t read_value(node ** head, uint32_t key, char ** p){
 }
 
 // Insert
-uint32_t add_value(node ** head, uint32_t key, char * value, int overwrite) {
+uint32_t add_value(uint32_t key, char * value, int overwrite) {
 
     node * current, * previous;
     node * new_element = (node*)malloc(sizeof(node));
@@ -58,19 +60,19 @@ uint32_t add_value(node ** head, uint32_t key, char * value, int overwrite) {
     //Critical Region
     pthread_rwlock_rdlock(&rwlock);//Lock de leitura para correr a lista
     pthread_mutex_lock(&lock);//Só um add de cada vez
-	if((*head)==NULL){ //Lista vazia
+	if(head==NULL){ //Lista vazia
         pthread_rwlock_wrlock(&rwlock2);//Lock de escrita para inserir na lista
-		(*head) = new_element;
-		(*head)->next = NULL;
+		head = new_element;
+		head->next = NULL;
 		pthread_rwlock_unlock(&rwlock2);
-    }else if((*head)->next==NULL){ //Só existe um elemento na lista
+    }else if(head->next==NULL){ //Só existe um elemento na lista
         pthread_rwlock_wrlock(&rwlock2);
-        if (key > (*head)->key){
-            (*head)->next = new_element;
+        if (key > head->key){
+            head->next = new_element;
             new_element->next = NULL;
-        }else if(key < (*head)->key){
-            new_element->next = *head;
-            *head = new_element;
+        }else if(key < head->key){
+            new_element->next = head;
+            head = new_element;
         }else{//(key == (*head)->key)
             //char * temporary = (char*)malloc((strlen(value)+strlen((*head)->value))*sizeof(char));
             //sprintf(temporary, "%s%s", (*head)->value, value);
@@ -79,14 +81,14 @@ uint32_t add_value(node ** head, uint32_t key, char * value, int overwrite) {
             else if(overwrite == 1){
                 char * temporary = (char*)malloc(strlen(value)*sizeof(char));
                 strcpy(temporary,value);
-                (*head)->value=temporary;
+                head->value=temporary;
             }
         }
         pthread_rwlock_unlock(&rwlock2);
 	}else{ 	//Mais do que um elemento na lista
         // Initialize pointers
-        current = *head;
-        previous = *head;
+        current = head;
+        previous = head;
         
 		while (added!=1) {
 			if(current->key==key) {		// Found element with key
@@ -117,8 +119,8 @@ uint32_t add_value(node ** head, uint32_t key, char * value, int overwrite) {
             }else if(current->key > key){
                 pthread_rwlock_wrlock(&rwlock2);
                 new_element->next = current;
-				if (*head == current) {
-					*head = new_element;
+				if (head == current) {
+					head = new_element;
 				}else{
 					previous->next = new_element;
                     previous->next->next=current;
@@ -135,9 +137,9 @@ uint32_t add_value(node ** head, uint32_t key, char * value, int overwrite) {
 }
 
 // Delete
-uint32_t delete_value(node ** head, uint32_t key){
+uint32_t delete_value(uint32_t key){
     
-    node * previous, * current = *head;
+    node * previous, * current = head;
     uint32_t deleted=0;
     
     previous = current;
@@ -148,9 +150,9 @@ uint32_t delete_value(node ** head, uint32_t key){
 			//Critical Region 2
 			pthread_rwlock_wrlock(&rwlock2);
             if (current->next == NULL && previous==current) {
-                *head = NULL;
+                head = NULL;
             }else if (previous==current){
-                *head = current->next;
+                head = current->next;
             }else{
                 previous->next = current->next;
             }
@@ -168,3 +170,15 @@ uint32_t delete_value(node ** head, uint32_t key){
     return deleted;
 }
 
+//Backup
+void build_backup(FILE * fp){
+    node * current;
+    current=head;
+
+    while(current->next!=NULL){
+        fprintf(fp,"%u %lu",current->key ,strlen(current->value));
+        fprintf(fp,"%s",current->value);
+        
+    }
+    fclose(fp);
+}

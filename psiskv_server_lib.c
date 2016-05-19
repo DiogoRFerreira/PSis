@@ -12,7 +12,6 @@
 #include "psiskv_server_lib.h"
 #include "psiskv_list.h"
 
-node * head = NULL;
 int i = 0;
 
 int kv_server_listen(int kv_server_port){
@@ -84,7 +83,7 @@ int kv_server_read(int kv_descriptor){
         //Insert value in the list
         //Critical Region
         //pthread_rwlock_wrlock(&rwlock);
-        returnvalue=add_value(&head, msg.key, value, overwrite);
+        returnvalue=add_value(msg.key, value, overwrite);
         //pthread_rwlock_unlock(&rwlock);
         printf(" Insert %s %u\n", value, msg.key);
         //Sucess or not
@@ -97,7 +96,7 @@ int kv_server_read(int kv_descriptor){
     if(msg.operation == 3){//Retrieve
 
         char *p = (char*)malloc(msg.value_length*sizeof(char));
-        returnvalue=read_value(&head, msg.key, &p);
+        returnvalue=read_value(msg.key, &p);
         printf(" Retrieve %s %u\n", p, msg.key);
         
         //Envia o valor para ler
@@ -121,7 +120,7 @@ int kv_server_read(int kv_descriptor){
         //Critical Region
         //pthread_rwlock_wrlock(&rwlock);
         printf("Delete value inside critical region\n");
-        returnvalue=delete_value(&head, msg.key);
+        returnvalue=delete_value(msg.key);
         //pthread_rwlock_unlock(&rwlock);
         //Sucess or not
         n=write(kv_descriptor, &returnvalue, sizeof(returnvalue));
@@ -132,7 +131,7 @@ int kv_server_read(int kv_descriptor){
         printf(" Delete %u\n", msg.key);
 	}
     
-	print_list(head);
+	print_list();
 	
 	return 0;
 }

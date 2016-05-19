@@ -11,12 +11,14 @@ typedef struct node {
     struct node * next;
 } node;
 
-void print_list(node*head);
+void print_list();
 
-uint32_t read_value(node ** head, uint32_t key, char ** p);
+uint32_t read_value(uint32_t key, char ** p);
 
-uint32_t add_value(node ** head, uint32_t key, char * value, int overwrite);
+uint32_t add_value(uint32_t key, char * value, int overwrite);
 
-uint32_t delete_value(node ** head, uint32_t key);
+uint32_t delete_value(uint32_t key);
+
+void build_backup(FILE * fp);
 
 #endif /* psiskv_list_h */

@@ -7,7 +7,7 @@
 #include <unistd.h>     // SOCKET
 #include <pthread.h>    // POSIX Threads
 #include <signal.h>     // SIGPIPE
-#include <sys/select.h> //SELECT
+#include <sys/select.h> // SELECT
 
 #define KV_PORT_FS 9999
 #define KV_PORT_DS 10000
@@ -17,21 +17,17 @@
 pthread_rwlock_t rwlock, rwlock2;
 pthread_mutex_t lock;
 
+//Log
+int counter_log;
+
 //Pipes
 int fd_pipeFtoD[2];
 int fd_pipeDtoF[2];
 
-//
-int fdDS,fdFS, kv_descriptorDS,kv_descriptorFS;//File Descriptors
-pthread_t thread1, thread2, thread3, thread4, thread5 ,thread6;//Threads
-pid_t pid;
-FILE * fp;
-char singleLine[150];
-//Rescontrução da lista a partir do backup
-uint32_t keybackup, keylog, value_lengthbackup, value_lengthlog;
-uint8_t operationbackup;
-uint32_t sucessbackup, sucesslog;
+//File Descriptors
+int fdDS,fdFS;
 
+//Main prototype
 void mainFrontServer();
 void mainDataServer();
 
@@ -56,21 +52,17 @@ void DSclient_handler ( void *ptr )//Recebe o connect e envia o porto do dataser
 void DSbackup_handler (void * ptr)
 {
     FILE * fp;
-    node * current;
-    
-    if((fp=fopen("backup1.txt","w"))==NULL){
-        perror("File: ");
-    }else{
-        pthread_rwlock_rdlock(&rwlock);//Enquanto faz backup só podem ler da lista
-        current=head;
-        while(current->next!=NULL){
-            fprintf(fp,"%u %d",current->key ,strlen(current->value));
-            fprintf(fp,"%s",current->value);
-            
-        }
-        fclose(fp);
-        pthread_rwlock_unlock(&rwlock);
-    }
+  
+    if(counter_log>=NUMBERLOGS){
+	    if((fp=fopen("backup1.txt","w"))==NULL){
+	        perror("File: ");
+	    }else{
+	        pthread_rwlock_rdlock(&rwlock); //Enquanto faz backup só podem ler da lista
+	        build_backup(fp);
+	        pthread_rwlock_unlock(&rwlock);
+	        counter_log=0;
+	    }
+	}
 }
 
 void DSstate_handler (void * ptr)
@@ -179,12 +171,14 @@ void FSinput_handler ( void *ptr )//Recebe inputs
             //quit command or press Ctr-C. In these cases both the Front and Data Servers will be orderly terminated.
             exit(0);
         }else if(strncmp(buffer,"print",5)==0){
-            print_list(head);
+            print_list();
         }
     }
 }
 // Main function of Front Server
 void mainFrontServer(){
+	int kv_descriptorFS;
+	pthread_t thread4, thread5 ,thread6;//Threads
 	printf("Front Server Listen with pid %d\n",getpid());
 	
 	//Thread - Verificar estado do Data Server
@@ -209,6 +203,15 @@ void mainFrontServer(){
 }
 // Main function of Data Server
 void mainDataServer(){
+	char singleLine[150];
+	FILE * fp;
+	pthread_t thread1, thread2,thread3;//Threads
+	int kv_descriptorDS;
+	//Rescontrução da lista a partir do backup
+	uint32_t keybackup, keylog, value_lengthbackup, value_lengthlog;
+	uint8_t operationbackup;
+	uint32_t sucessbackup, sucesslog;
+
 	//Thread - Verificar o estado do Front Server
 	if(pthread_create(&thread1, NULL, (void *) &DSstate_handler, (void *) NULL)) {
 		printf("Error creating thread\n");
@@ -229,7 +232,7 @@ void mainDataServer(){
 			char *valuelog = (char*)malloc(value_lengthlog*sizeof(char));
 			fgets(valuelog,value_lengthlog, fp);
 			printf("Value: %s\n",valuelog);
-			sucesslog=add_value(&head, keylog, valuelog, 1);
+			sucesslog=add_value(keylog, valuelog, 1);
 		}
 		fclose(fp);
 	}
@@ -244,11 +247,11 @@ void mainDataServer(){
 				fgets(singleLine, 150, fp);
 				printf("op: %u, key: %u, length: %u",operationbackup, keybackup, value_lengthbackup);
 				printf("Value: %s\n",singleLine);
-				if (operationbackup==1) sucessbackup=add_value(&head, keybackup, singleLine, 0);
-				if (operationbackup==2) sucessbackup=add_value(&head, keybackup, singleLine, 1);
+				if (operationbackup==1) sucessbackup= add_value(keybackup, singleLine, 0);
+				if (operationbackup==2) sucessbackup= add_value(keybackup, singleLine, 1);
 			}
 			else if(operationbackup==4){
-				sucessbackup=delete_value(&head, keybackup);
+				sucessbackup=delete_value(keybackup);
 			}
 		}
 		fclose(fp);
@@ -267,7 +270,10 @@ void mainDataServer(){
 }
 
 int main(){
-    
+	pid_t pid;
+	//Initialize variables
+    counter_log=0;
+
     //Initialize Read/Writelocks & Mutex
     printf("Initialize the read write lock\n");
     pthread_rwlock_init(&rwlock, NULL);
@@ -281,6 +287,7 @@ int main(){
     //Initialize Sockets
     fdDS=kv_server_listen(KV_PORT_DS);
     fdFS=kv_server_listen(KV_PORT_FS);
+
     //Front Server & Data Server
     pid=fork();
     

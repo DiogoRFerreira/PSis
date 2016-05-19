@@ -21,7 +21,6 @@ typedef struct msg_{
 	int value_length;
 }message;
 
-extern node * head;
 extern int numberlogs;
 
 int kv_server_listen(int kv_server_port);
