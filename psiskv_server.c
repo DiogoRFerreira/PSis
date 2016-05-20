@@ -6,23 +6,20 @@
 #include <string.h>
 #include <unistd.h>     // SOCKET
 #include <pthread.h>    // POSIX Threads
-#include <signal.h>     // SIGPIPE
+#include <signal.h>     // SIGNALS
 #include <sys/select.h> // SELECT
 
 #define KV_PORT_FS 9999
 #define KV_PORT_DS 10000
 
-#define NUMBERLOGS 100 //number of writes in the log file before writing backup file again
 
 pthread_rwlock_t rwlock, rwlock2;
 pthread_mutex_t lock;
 
-//Log
-int counter_log;
-
 //Pipes
 int fd_pipeFtoD[2];
 int fd_pipeDtoF[2];
+int fd_pipeBackup[2];
 
 //File Descriptors
 int fdDS,fdFS;
@@ -30,6 +27,32 @@ int fdDS,fdFS;
 //Main prototype
 void mainFrontServer();
 void mainDataServer();
+
+//Signal Handler
+void sig_handler(int signo)
+{
+	FILE * fp;
+	FILE * fplog; 
+	
+	if (signo == SIGINT) printf("received SIGINT\n");
+	printf("pid: %d\n",getpid());
+	
+	
+	//Construir o Backup e fazer o unlink
+	if((fplog=fopen("log.txt","w"))==NULL){//Apago os valores anteriores
+		perror("File: ");
+	}else{
+		if((fp=fopen("backup.txt","w"))==NULL){
+			perror("File: ");
+		}else{
+			build_backup(fp);
+		}
+	}
+	
+	//Sigkill do data server
+	
+	exit(0);
+}
 
 //Data Server Threads
 void DSclient_handler ( void *ptr )//Recebe o connect e envia o porto do dataserver
@@ -51,17 +74,21 @@ void DSclient_handler ( void *ptr )//Recebe o connect e envia o porto do dataser
 
 void DSbackup_handler (void * ptr)
 {
-    FILE * fp;
-  
-    if(counter_log>=NUMBERLOGS){
-	    if((fp=fopen("backup1.txt","w"))==NULL){
+    FILE * fp ;
+    FILE * fplog;
+	int length = sizeof(int);
+	int buff;
+	
+    if(read(fd_pipeBackup[0], &buff, length)){
+		if((fplog=fopen("log.txt","w"))==NULL){//Apago os valores anteriores
 	        perror("File: ");
 	    }else{
-	        pthread_rwlock_rdlock(&rwlock); //Enquanto faz backup só podem ler da lista
-	        build_backup(fp);
-	        pthread_rwlock_unlock(&rwlock);
-	        counter_log=0;
-	    }
+			if((fp=fopen("backup.txt","w"))==NULL){
+				perror("File: ");
+			}else{
+				build_backup(fp);
+			}
+		}
 	}
 }
 
@@ -169,6 +196,7 @@ void FSinput_handler ( void *ptr )//Recebe inputs
         printf("%s",buffer);
         if(strncmp(buffer,"quit",4)==0){
             //quit command or press Ctr-C. In these cases both the Front and Data Servers will be orderly terminated.
+            //Construir backup e fazer o unlink
             exit(0);
         }else if(strncmp(buffer,"print",5)==0){
             print_list();
@@ -191,6 +219,8 @@ void mainFrontServer(){
 		printf("Error creating thread\n");
 	}
 	
+	//Signal Ctr-C
+	if (signal(SIGINT, sig_handler) == SIG_ERR) printf("\nCan't catch SIGINT\n");
 	
 	while(1){
 		//Thread - Receber clientes
@@ -244,6 +274,7 @@ void mainDataServer(){
 	        	sucessbackup = add_value(keybackup, valuebackup, 0);
 	        	free(valuebackup);
 	        	i=1;
+	        	printf("Sucessfull add: %u",sucessbackup);
 	        }
 		}
 		fclose(fp);
@@ -268,9 +299,11 @@ void mainDataServer(){
 				if (operationlog==1) sucesslog = add_value(keylog, valuelog, 0);
 				if (operationlog==2) sucesslog = add_value(keylog, valuelog, 1);
 				free(valuelog);
+				printf("Sucessfull add: %u",sucesslog);
 			}
 			else if(operationlog==4){
 				sucesslog = delete_value(keylog);
+				printf("Sucessfull delete: %u",sucesslog);
 			}
 			//printf("Sucess: %u\n",sucesslog);
 		}
@@ -291,18 +324,18 @@ void mainDataServer(){
 
 int main(){
 	pid_t pid;
-	//Initialize variables
-    counter_log=0;
 
     //Initialize Read/Writelocks & Mutex
     printf("Initialize the read write lock\n");
     pthread_rwlock_init(&rwlock, NULL);
     pthread_rwlock_init(&rwlock2, NULL);
     pthread_mutex_init(&lock, NULL);
+    pthread_mutex_init(&locklog, NULL);
     
     //Initialize Pipes
     if(pipe(fd_pipeDtoF)==-1)perror("Pipe Data to Front: ");
     if(pipe(fd_pipeFtoD)==-1)perror("Pipe Front to Data: ");
+    if(pipe(fd_pipeBackup)==-1)perror("Pipe Backup: ");
     
     //Initialize Sockets
     fdDS=kv_server_listen(KV_PORT_DS);

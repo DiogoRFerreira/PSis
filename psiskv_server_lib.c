@@ -12,6 +12,12 @@
 #include "psiskv_server_lib.h"
 #include "psiskv_list.h"
 
+#define NUMBERLOGS 100 //number of writes in the log file before writing backup file again
+
+//Log
+int counter_log = 0;
+
+pthread_mutex_t locklog;
 
 int kv_server_listen(int kv_server_port){
 	int fd;
@@ -138,16 +144,26 @@ int kv_server_read(int kv_descriptor){
     }else{
         printf("Colocando instrução no log!\n");
         if(msg.operation == 1|| msg.operation ==2){
+			pthread_mutex_lock(&locklog);//Tem de escrever as duas vezes seguidas sempre
             fprintf(fp,"%d %u %u\n", msg.operation, msg.key, msg.value_length);
             fprintf(fp,"%s", value);
+            pthread_mutex_unlock(&locklog);
         }else if(msg.operation == 4){
+			pthread_mutex_lock(&locklog);
             fprintf(fp, "%d %u 0",msg.operation, msg.key);
+            pthread_mutex_unlock(&locklog);
         }
         
         fclose(fp);
     }
-
     free(value);
+    //-------------------
+    int length = sizeof(int);
+    int buff = counter_log;
+    
+	if(counter_log>=NUMBERLOGS){
+		write(fd_pipeBackup[1],&buff, length);
+	}
     
 	print_list();
 	

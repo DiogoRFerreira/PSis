@@ -168,12 +168,16 @@ uint32_t delete_value(uint32_t key){
 //Backup
 void build_backup(FILE * fp){
     node * current;
+    
+    pthread_rwlock_rdlock(&rwlock); //Enquanto faz backup só podem ler da lista
     current=head;
 
-    while(current->next!=NULL){
+    while(current!=NULL){
+		//mutex para escrever no backup
         fprintf(fp,"%u %lu",current->key ,strlen(current->value));
-        fprintf(fp,"%s",current->value);
-        
+        fprintf(fp,"%s",current->value); 
+        current=current->next;  
     }
+    pthread_rwlock_unlock(&rwlock);
     fclose(fp);
 }

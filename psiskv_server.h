@@ -4,6 +4,6 @@
 extern pthread_rwlock_t	rwlock, rwlock2;
 extern pthread_mutex_t lock;
 
-extern int counter_log;
+extern int fd_pipeBackup[2];
 
 #endif /* psiskv_server_h */
