@@ -174,8 +174,8 @@ void build_backup(FILE * fp){
 
     while(current!=NULL){
 		//mutex para escrever no backup
-        fprintf(fp,"%u %lu",current->key ,strlen(current->value));
-        fprintf(fp,"%s",current->value); 
+        fprintf(fp,"%u %lu\n",current->key ,strlen(current->value));
+        fprintf(fp,"%s\n",current->value); 
         current=current->next;  
     }
     pthread_rwlock_unlock(&rwlock);

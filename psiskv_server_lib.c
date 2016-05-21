@@ -35,12 +35,12 @@ int kv_server_listen(int kv_server_port){
 	
 	if(bind(fd,(struct sockaddr*)&addr,sizeof(addr))==-1){
 		perror("Bind: ");//error
-		exit(-1);
+		return -1;
 	}
 	
 	if(listen(fd,5)==-1){
 		perror("Listen: ");//error
-		exit(-1);
+		return -1;
 	}
 	
 	return fd;
@@ -145,12 +145,12 @@ int kv_server_read(int kv_descriptor){
         printf("Colocando instrução no log!\n");
         if(msg.operation == 1|| msg.operation ==2){
 			pthread_mutex_lock(&locklog);//Tem de escrever as duas vezes seguidas sempre
-            fprintf(fp,"%d %u %u\n", msg.operation, msg.key, msg.value_length);
-            fprintf(fp,"%s", value);
+            fprintf(fp,"%d %u %u\n", msg.operation, msg.key, msg.value_length-1);
+            fprintf(fp,"%s\n", value);
             pthread_mutex_unlock(&locklog);
         }else if(msg.operation == 4){
 			pthread_mutex_lock(&locklog);
-            fprintf(fp, "%d %u 0",msg.operation, msg.key);
+            fprintf(fp, "%d %u 0\n",msg.operation, msg.key);
             pthread_mutex_unlock(&locklog);
         }
         

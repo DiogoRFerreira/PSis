@@ -22,7 +22,10 @@ int fd_pipeDtoF[2];
 int fd_pipeBackup[2];
 
 //File Descriptors
-int fdDS,fdFS;
+int fdDS = -1, fdFS;
+
+//Try Bind DataServer
+int iport = 0;
 
 //Main prototype
 void mainFrontServer();
@@ -137,7 +140,7 @@ void FSclient_handler ( void * ptr )//Recebe o connect e envia o porto do datase
     int *fd;
     long n;
     fd = (int*) ptr;  // type cast to a pointer to int
-    int port=KV_PORT_DS;
+    int port=KV_PORT_DS+iport;
     printf("fd no client handler (FS): %d\n", *fd);
     
     //SIGPIPE signal
@@ -338,8 +341,12 @@ int main(){
     if(pipe(fd_pipeBackup)==-1)perror("Pipe Backup: ");
     
     //Initialize Sockets
-    fdDS=kv_server_listen(KV_PORT_DS);
+    while(fdDS==-1){
+    	fdDS=kv_server_listen(KV_PORT_DS+iport);
+    	iport++;
+    }
     fdFS=kv_server_listen(KV_PORT_FS);
+    if(fdFS==-1)exit(1);
 
     //Front Server & Data Server
     pid=fork();
