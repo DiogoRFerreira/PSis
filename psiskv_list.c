@@ -27,10 +27,9 @@ void print_list(){
 // Retrieve value from list if it exists
 uint32_t read_value(uint32_t key, char ** p){
 
-    node * current = head;
-    
     //Critical Region
 	pthread_rwlock_rdlock(&rwlock);
+	node * current = head;
 	while (current!=NULL) {
 		if(current->key==key){
 			pthread_rwlock_unlock(&rwlock);

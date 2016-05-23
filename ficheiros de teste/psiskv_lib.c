@@ -11,7 +11,7 @@
 
 //Connect
 int kv_connect(char * kv_controler_ip,int kv_server_port){
-    int fd;
+    int fd , fd1;
     struct sockaddr_in addr;
     int port_dataserver;
     long n;
@@ -55,20 +55,21 @@ int kv_connect(char * kv_controler_ip,int kv_server_port){
     //Data Server Port
     addr.sin_port=htons(port_dataserver);
     
-    fd=socket(AF_INET,SOCK_STREAM,0);//TCP socket - necessário senão dá erro Bad file descriptor no connect
-    if(fd==-1){
+    printf("Data Server Port:%d",port_dataserver);
+    fd1=socket(AF_INET,SOCK_STREAM,0);//TCP socket - necessário senão dá erro Bad file descriptor no connect
+    if(fd1==-1){
         perror("Socket: ");
         return -1;
     }
     
     //Connect to Data Server
-    n=connect(fd,(struct sockaddr*)&addr,sizeof(addr));
+    n=connect(fd1,(struct sockaddr*)&addr,sizeof(addr));
     if(n==-1){
         perror("Connect: ");//error
         return -1;
     }
     printf("--Connected to DS\n");
-    return fd;
+    return fd1;
 }
 
 //Close
@@ -145,6 +146,7 @@ int kv_read(int kv_descriptor, uint32_t key, char * value, uint32_t value_length
                 perror("Read: ");
                 return -1;
         }
+		memcpy(value, newvalue, newlength);
     }else{
         return -2;
     }

@@ -25,7 +25,7 @@ int fd_pipeBackup[2];
 int fdDS = -1, fdFS;
 
 //Try Bind DataServer
-int iport = 0;
+int iport = -1;
 
 //Main prototype
 void mainFrontServer();
@@ -152,6 +152,7 @@ void FSclient_handler ( void * ptr )//Recebe o connect e envia o porto do datase
         perror("Write: ");
         return;
     }
+    printf("fd:%d port:%d\n",*fd,port);
 }
 
 void FSstate_handler ( void *ptr )//Verifica o estado do data server
@@ -277,7 +278,7 @@ void mainDataServer(){
 	        	sucessbackup = add_value(keybackup, valuebackup, 0);
 	        	free(valuebackup);
 	        	i=1;
-	        	printf("Sucessfull add: %u",sucessbackup);
+	        	printf("Sucessfull add: %u\n",sucessbackup);
 	        }
 		}
 		fclose(fp);
@@ -302,11 +303,11 @@ void mainDataServer(){
 				if (operationlog==1) sucesslog = add_value(keylog, valuelog, 0);
 				if (operationlog==2) sucesslog = add_value(keylog, valuelog, 1);
 				free(valuelog);
-				printf("Sucessfull add: %u",sucesslog);
+				printf("Sucessfull add: %u\n",sucesslog);
 			}
 			else if(operationlog==4){
 				sucesslog = delete_value(keylog);
-				printf("Sucessfull delete: %u",sucesslog);
+				printf("Sucessfull delete: %u\n",sucesslog);
 			}
 			//printf("Sucess: %u\n",sucesslog);
 		}
@@ -342,8 +343,9 @@ int main(){
     
     //Initialize Sockets
     while(fdDS==-1){
-    	fdDS=kv_server_listen(KV_PORT_DS+iport);
     	iport++;
+    	fdDS=kv_server_listen(KV_PORT_DS+iport);
+    	printf("iport:%d fdDS:%d\n",iport,fdDS);
     }
     fdFS=kv_server_listen(KV_PORT_FS);
     if(fdFS==-1)exit(1);

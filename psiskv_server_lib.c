@@ -100,9 +100,9 @@ int kv_server_read(int kv_descriptor){
     }
     if(msg.operation == 3){//Retrieve
 
-        char *p = (char*)malloc(msg.value_length*sizeof(char));
+        char * p = (char*)malloc(msg.value_length*sizeof(char));
         returnvalue=read_value(msg.key, &p);
-        printf(" Retrieve %s %u\n", p, msg.key);
+        printf("Retrieve %s %u----------------------------------------------\n", p, msg.key);
         
         //Envia o valor para ler
         n=write(kv_descriptor, &returnvalue, sizeof(returnvalue));
@@ -118,6 +118,7 @@ int kv_server_read(int kv_descriptor){
                 return -1;
             }
         }
+        free(p);
     }
     if(msg.operation==4){//Delete
         uint32_t returnvalue;
